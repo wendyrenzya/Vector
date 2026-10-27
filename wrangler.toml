@@ -1,0 +1,9 @@
+name = "vector"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "./public"
+
+[[routes]]
+pattern = "vector.qilo.one"
+custom_domain = true

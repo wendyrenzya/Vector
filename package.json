@@ -1,0 +1,18 @@
+{
+  "name": "vector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Image to vector (SVG/PDF) converter, runs fully in the browser",
+  "scripts": {
+    "postinstall": "node scripts/vendor.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  },
+  "dependencies": {
+    "esm-potrace-wasm": "^0.5.1",
+    "vtracer-browser": "^0.0.3"
+  }
+}

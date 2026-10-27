@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vector</title>
+  <meta name="description" content="Ubah gambar jadi vektor SVG dan PDF langsung di browser.">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Vector</h1>
+    <p>Ubah logo, ikon, dan ilustrasi jadi SVG &amp; PDF yang scalable. Diproses di browser, gambar tidak diunggah.</p>
+  </header>
+  <main>
+    <label id="drop" aria-label="Unggah gambar">
+      <span>Seret gambar PNG/JPG ke sini atau klik untuk memilih</span>
+      <input id="file" type="file" accept="image/png,image/jpeg" hidden>
+    </label>
+    <p id="info"></p>
+    <section id="tools" hidden>
+      <label>Mode
+        <select id="mode">
+          <option value="color">Warna</option>
+          <option value="bw">Hitam-putih (1 warna)</option>
+        </select>
+      </label>
+      <label data-mode="color">Jumlah warna <output id="o-colors">16</output>
+        <input id="colors" type="range" min="2" max="32" value="16">
+      </label>
+      <label data-mode="bw" hidden>Ambang hitam-putih <output id="o-threshold">128</output>
+        <input id="threshold" type="range" min="1" max="254" value="128">
+      </label>
+      <label>Filter bintik <output id="o-speckle">4</output>
+        <input id="speckle" type="range" min="0" max="16" value="4">
+      </label>
+      <label data-mode="color">Kehalusan kurva <output id="o-smooth">0</output>
+        <input id="smooth" type="range" min="0" max="30" value="0">
+      </label>
+      <p id="status" role="status"></p>
+    </section>
+    <div id="result" hidden>
+      <canvas id="preview"></canvas>
+      <img id="out" alt="Hasil vektor">
+    </div>
+  </main>
+  <script type="module" src="/app.js"></script>
+  <footer>
+    <p>Cocok untuk logo, ikon, dan ilustrasi flat. Kurang cocok untuk foto.</p>
+  </footer>
+</body>
+</html>

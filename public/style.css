@@ -1,0 +1,47 @@
+:root {
+  --bg: #fafaf8;
+  --fg: #1a1a1a;
+  --muted: #6b6b66;
+  --line: #d8d8d2;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151515; --fg: #f0f0ec; --muted: #9a9a94; --line: #333; }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0 16px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+header, main, footer { max-width: 960px; margin: 0 auto; }
+header { padding: 32px 0 16px; }
+h1 { margin: 0 0 8px; font-size: 28px; }
+header p, footer p { margin: 0; color: var(--muted); }
+#drop {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+#drop.over { border-color: var(--fg); }
+#info { color: var(--muted); font-size: 14px; }
+#tools { display: grid; gap: 12px; margin: 16px 0; }
+#tools label { display: grid; gap: 4px; font-size: 14px; }
+#tools [hidden] { display: none; }
+#tools input[type=range] { width: 100%; }
+#status { margin: 0; color: var(--muted); font-size: 14px; min-height: 1.5em; }
+#result { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#result canvas, #result img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
+}
+@media (max-width: 600px) { #result { grid-template-columns: 1fr; } }
+footer { padding: 24px 0 32px; font-size: 14px; }
