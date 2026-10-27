@@ -40,8 +40,17 @@
       <p id="status" role="status"></p>
     </section>
     <div id="result" hidden>
-      <canvas id="preview"></canvas>
-      <img id="out" alt="Hasil vektor">
+      <div class="bar">
+        <button id="zout" type="button" aria-label="Perkecil">−</button>
+        <output id="zlevel">100%</output>
+        <button id="zin" type="button" aria-label="Perbesar">+</button>
+        <button id="zfit" type="button">Fit</button>
+        <button id="dl" type="button" disabled>Unduh SVG</button>
+      </div>
+      <div class="panes">
+        <div class="pane"><span class="tag">Asli</span><canvas id="preview"></canvas></div>
+        <div class="pane"><span class="tag">Vektor</span><img id="out" alt="Hasil vektor"></div>
+      </div>
     </div>
   </main>
   <script type="module" src="/app.js"></script>

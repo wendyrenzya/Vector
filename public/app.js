@@ -5,6 +5,7 @@ const MAX_SIDE = 2048;
 const MIN_SIDE = 600; // gambar lebih kecil dari ini diperbesar dulu supaya kurvanya halus
 const UPSCALE_TO = 800;
 const MAX_UPSCALE = 4;
+const MAX_ZOOM = 16;
 const ACCEPT = ["image/png", "image/jpeg"];
 
 const drop = document.getElementById("drop");
@@ -15,6 +16,9 @@ const tools = document.getElementById("tools");
 const result = document.getElementById("result");
 const out = document.getElementById("out");
 const status = document.getElementById("status");
+const panes = [...document.querySelectorAll(".pane")];
+const zlevel = document.getElementById("zlevel");
+const dl = document.getElementById("dl");
 const modeEl = document.getElementById("mode");
 const sliders = {
   colors: document.getElementById("colors"),
@@ -27,6 +31,9 @@ const tracer = createVTracer();
 const potraceReady = initPotrace();
 let runId = 0;
 let timer = 0;
+let lastSvg = "";
+let baseName = "vector";
+const view = { s: 1, x: 0, y: 0 };
 
 // Hitung ukuran akhir: sisi panjang dibatasi MAX_SIDE, rasio dijaga.
 export function fitSize(w, h, max = MAX_SIDE) {
@@ -80,7 +87,53 @@ async function load(file) {
   info.textContent = size.scaled
     ? `${file.name}: diperkecil ke ${size.w}×${size.h}px`
     : `${file.name}: ${size.w}×${size.h}px`;
+  baseName = file.name.replace(/\.[^.]+$/, "") || "vector";
+  for (const p of panes) p.style.aspectRatio = `${size.w} / ${size.h}`;
+  lastSvg = "";
+  dl.disabled = true;
+  view.s = 1;
+  view.x = view.y = 0;
+  applyView();
   schedule(0);
+}
+
+// Samakan SVG kedua engine: buang DOCTYPE, width/height = ukuran gambar asli,
+// viewBox = ruang koordinat hasil trace (beda kalau gambar diperbesar dulu).
+// VTracer tidak menulis viewBox sama sekali, tanpanya SVG tidak ikut skala.
+function finalizeSvg(svg, tw, th, w, h) {
+  return svg
+    .replace(/<!DOCTYPE[^>]*>/i, "")
+    .replace(/<svg\b[^>]*>/, (tag) =>
+      tag
+        .replace(/\s(width|height|viewBox)="[^"]*"/g, "")
+        .replace(/>$/, ` width="${w}" height="${h}" viewBox="0 0 ${tw} ${th}">`),
+    );
+}
+
+function applyView() {
+  const w = panes[0].clientWidth;
+  const h = panes[0].clientHeight;
+  view.x = Math.min(0, Math.max(w * (1 - view.s), view.x));
+  view.y = Math.min(0, Math.max(h * (1 - view.s), view.y));
+  const t = `translate(${view.x}px, ${view.y}px) scale(${view.s})`;
+  preview.style.transform = t;
+  out.style.transform = t;
+  for (const p of panes) p.style.touchAction = view.s > 1 ? "none" : "pan-y";
+  zlevel.textContent = `${Math.round(view.s * 100)}%`;
+}
+
+// Zoom di titik (px, py) relatif terhadap pane, titik itu tetap di tempatnya.
+function zoomAt(px, py, factor) {
+  const s = Math.min(MAX_ZOOM, Math.max(1, view.s * factor));
+  const k = s / view.s;
+  view.x = px - (px - view.x) * k;
+  view.y = py - (py - view.y) * k;
+  view.s = s;
+  applyView();
+}
+
+function zoomCenter(factor) {
+  zoomAt(panes[0].clientWidth / 2, panes[0].clientHeight / 2, factor);
 }
 
 // Opsi VTracer dari slider. Kehalusan 0 berarti simplify mati.
@@ -144,10 +197,12 @@ async function trace() {
       });
     }
     if (id !== runId) return; // hasil basi, ada proses yang lebih baru
+    lastSvg = finalizeSvg(svg, imgData.width, imgData.height, width, height);
     URL.revokeObjectURL(out.src);
-    out.src = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-    const paths = (svg.match(/<path/g) || []).length;
-    status.textContent = `${paths} path, ${(svg.length / 1024).toFixed(1)} KB, ${Math.round(performance.now() - t0)} ms${k > 1 ? `, diperbesar ${k}×` : ""}`;
+    out.src = URL.createObjectURL(new Blob([lastSvg], { type: "image/svg+xml" }));
+    dl.disabled = false;
+    const paths = (lastSvg.match(/<path/g) || []).length;
+    status.textContent = `${paths} path, ${(lastSvg.length / 1024).toFixed(1)} KB, ${Math.round(performance.now() - t0)} ms${k > 1 ? `, diperbesar ${k}×` : ""}`;
   } catch (e) {
     if (id === runId) status.textContent = `Gagal: ${e.message}`;
   }
@@ -159,6 +214,46 @@ for (const [name, el] of Object.entries(sliders)) {
     schedule();
   });
 }
+
+document.getElementById("zin").addEventListener("click", () => zoomCenter(2));
+document.getElementById("zout").addEventListener("click", () => zoomCenter(0.5));
+document.getElementById("zfit").addEventListener("click", () => {
+  view.s = 1;
+  view.x = view.y = 0;
+  applyView();
+});
+dl.addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lastSvg], { type: "image/svg+xml" }));
+  a.download = `${baseName}.svg`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+for (const pane of panes) {
+  pane.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const r = pane.getBoundingClientRect();
+    zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.002));
+  }, { passive: false });
+  pane.addEventListener("pointerdown", (e) => {
+    pane.setPointerCapture(e.pointerId);
+    pane.dataset.drag = `${e.clientX},${e.clientY}`;
+  });
+  pane.addEventListener("pointermove", (e) => {
+    if (!pane.dataset.drag) return;
+    const [x0, y0] = pane.dataset.drag.split(",").map(Number);
+    view.x += e.clientX - x0;
+    view.y += e.clientY - y0;
+    pane.dataset.drag = `${e.clientX},${e.clientY}`;
+    applyView();
+  });
+  const end = () => delete pane.dataset.drag;
+  pane.addEventListener("pointerup", end);
+  pane.addEventListener("pointercancel", end);
+  pane.addEventListener("dblclick", () => document.getElementById("zfit").click());
+}
+window.addEventListener("resize", applyView);
 
 modeEl.addEventListener("change", () => {
   for (const el of document.querySelectorAll("#tools [data-mode]")) {
