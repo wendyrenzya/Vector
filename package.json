@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "esm-potrace-wasm": "^0.5.1",
+    "jspdf": "^4.2.1",
+    "svg2pdf.js": "^2.8.1",
     "vtracer-browser": "^0.0.3"
   }
 }

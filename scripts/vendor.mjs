@@ -14,4 +14,13 @@ const pSrc = new URL("../node_modules/esm-potrace-wasm/dist/index.js", import.me
 const pDst = new URL("../public/vendor/potrace/", import.meta.url);
 mkdirSync(pDst, { recursive: true });
 cpSync(pSrc, new URL("index.js", pDst));
-console.log("vendor: vtracer-browser dan esm-potrace-wasm disalin ke public/vendor/");
+// Build UMD (berdiri sendiri), dimuat lazy saat ekspor PDF.
+for (const [pkg, file, dir] of [
+  ["jspdf", "jspdf.umd.min.js", "jspdf"],
+  ["svg2pdf.js", "svg2pdf.umd.min.js", "svg2pdf"],
+]) {
+  const d = new URL(`../public/vendor/${dir}/`, import.meta.url);
+  mkdirSync(d, { recursive: true });
+  cpSync(new URL(`../node_modules/${pkg}/dist/${file}`, import.meta.url), new URL(file, d));
+}
+console.log("vendor: vtracer-browser, esm-potrace-wasm, jspdf, svg2pdf.js disalin ke public/vendor/");

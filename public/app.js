@@ -19,6 +19,7 @@ const status = document.getElementById("status");
 const panes = [...document.querySelectorAll(".pane")];
 const zlevel = document.getElementById("zlevel");
 const dl = document.getElementById("dl");
+const dlPdf = document.getElementById("dlpdf");
 const modeEl = document.getElementById("mode");
 const sliders = {
   colors: document.getElementById("colors"),
@@ -90,7 +91,7 @@ async function load(file) {
   baseName = file.name.replace(/\.[^.]+$/, "") || "vector";
   for (const p of panes) p.style.aspectRatio = `${size.w} / ${size.h}`;
   lastSvg = "";
-  dl.disabled = true;
+  dl.disabled = dlPdf.disabled = true;
   view.s = 1;
   view.x = view.y = 0;
   applyView();
@@ -200,7 +201,7 @@ async function trace() {
     lastSvg = finalizeSvg(svg, imgData.width, imgData.height, width, height);
     URL.revokeObjectURL(out.src);
     out.src = URL.createObjectURL(new Blob([lastSvg], { type: "image/svg+xml" }));
-    dl.disabled = false;
+    dl.disabled = dlPdf.disabled = false;
     const paths = (lastSvg.match(/<path/g) || []).length;
     status.textContent = `${paths} path, ${(lastSvg.length / 1024).toFixed(1)} KB, ${Math.round(performance.now() - t0)} ms${k > 1 ? `, diperbesar ${k}×` : ""}`;
   } catch (e) {
@@ -228,6 +229,50 @@ dl.addEventListener("click", () => {
   a.download = `${baseName}.svg`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+// jsPDF dan svg2pdf.js (UMD) dimuat sekali, hanya saat PDF pertama diminta.
+let pdfLibs;
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error(`gagal memuat ${src}`));
+    document.head.append(s);
+  });
+}
+function loadPdfLibs() {
+  pdfLibs ??= loadScript("/vendor/jspdf/jspdf.umd.min.js")
+    .then(() => loadScript("/vendor/svg2pdf/svg2pdf.umd.min.js"))
+    .catch((e) => { pdfLibs = undefined; throw e; }); // boleh dicoba lagi
+  return pdfLibs;
+}
+
+// PDF vektor: ukuran halaman = ukuran gambar asli (1 px CSS = 0,75 pt).
+dlPdf.addEventListener("click", async () => {
+  dlPdf.disabled = true;
+  try {
+    await loadPdfLibs();
+    const w = preview.width * 0.75;
+    const h = preview.height * 0.75;
+    const doc = new window.jspdf.jsPDF({ unit: "pt", format: [w, h], orientation: w > h ? "l" : "p" });
+    const el = new DOMParser().parseFromString(lastSvg, "image/svg+xml").documentElement;
+    const host = document.createElement("div"); // svg2pdf perlu elemen yang ada di dokumen
+    host.style.cssText = "position:absolute;left:-99999px;top:0";
+    host.append(el);
+    document.body.append(host);
+    try {
+      await window.svg2pdf.svg2pdf(el, doc, { x: 0, y: 0, width: w, height: h });
+    } finally {
+      host.remove();
+    }
+    doc.save(`${baseName}.pdf`);
+  } catch (e) {
+    status.textContent = `Gagal membuat PDF: ${e.message}`;
+  } finally {
+    dlPdf.disabled = !lastSvg;
+  }
 });
 
 for (const pane of panes) {
